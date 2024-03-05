@@ -301,6 +301,40 @@ contract LendingPool is VersionedInitializable, ILendingPool, LendingPoolStorage
   }
 
   /**
+   * @notice Allows a borrower to swap his debt between stable and variable mode,
+   * @dev introduce in a flavor stable rate deprecation
+   * @param asset The address of the underlying asset borrowed
+   * @param user The address of the user to be swapped
+   */
+  function swapToVariable(address asset, address user) external override whenNotPaused {
+    DataTypes.ReserveData storage reserve = _reserves[asset];
+
+    (uint256 stableDebt, uint256 variableDebt) = Helpers.getUserCurrentDebt(user, reserve);
+
+    ValidationLogic.validateSwapRateMode(
+      reserve,
+      _usersConfig[user],
+      stableDebt,
+      variableDebt,
+      DataTypes.InterestRateMode.STABLE
+    );
+
+    reserve.updateState();
+
+    IStableDebtToken(reserve.stableDebtTokenAddress).burn(msg.sender, stableDebt);
+    IVariableDebtToken(reserve.variableDebtTokenAddress).mint(
+      msg.sender,
+      msg.sender,
+      stableDebt,
+      reserve.variableBorrowIndex
+    );
+
+    reserve.updateInterestRates(asset, reserve.aTokenAddress, 0, 0);
+
+    emit Swap(asset, msg.sender, 1);
+  }
+
+  /**
    * @dev Allows a borrower to swap his debt between stable and variable mode, or viceversa
    * @param asset The address of the underlying asset borrowed
    * @param rateMode The rate mode that the user wants to swap to

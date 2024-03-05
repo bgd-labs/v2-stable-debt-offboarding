@@ -408,4 +408,6 @@ interface ILendingPool is IRescue {
   function setPause(bool val) external;
 
   function paused() external view returns (bool);
+
+  function swapToVariable(address asset, address user) external;
 }
