@@ -309,13 +309,12 @@ contract LendingPool is VersionedInitializable, ILendingPool, LendingPoolStorage
   function swapToVariable(address asset, address user) external override whenNotPaused {
     DataTypes.ReserveData storage reserve = _reserves[asset];
 
-    (uint256 stableDebt, uint256 variableDebt) = Helpers.getUserCurrentDebt(user, reserve);
+    (uint256 stableDebt,) = Helpers.getUserCurrentDebt(user, reserve);
 
     ValidationLogic.validateSwapRateMode(
       reserve,
       _usersConfig[user],
       stableDebt,
-      variableDebt,
       DataTypes.InterestRateMode.STABLE
     );
 
@@ -342,7 +341,7 @@ contract LendingPool is VersionedInitializable, ILendingPool, LendingPoolStorage
   function swapBorrowRateMode(address asset, uint256 rateMode) external override whenNotPaused {
     DataTypes.ReserveData storage reserve = _reserves[asset];
 
-    (uint256 stableDebt, uint256 variableDebt) = Helpers.getUserCurrentDebt(msg.sender, reserve);
+    (uint256 stableDebt, ) = Helpers.getUserCurrentDebt(msg.sender, reserve);
 
     DataTypes.InterestRateMode interestRateMode = DataTypes.InterestRateMode(rateMode);
 
@@ -350,33 +349,18 @@ contract LendingPool is VersionedInitializable, ILendingPool, LendingPoolStorage
       reserve,
       _usersConfig[msg.sender],
       stableDebt,
-      variableDebt,
       interestRateMode
     );
 
     reserve.updateState();
 
-    if (interestRateMode == DataTypes.InterestRateMode.STABLE) {
-      IStableDebtToken(reserve.stableDebtTokenAddress).burn(msg.sender, stableDebt);
-      IVariableDebtToken(reserve.variableDebtTokenAddress).mint(
-        msg.sender,
-        msg.sender,
-        stableDebt,
-        reserve.variableBorrowIndex
-      );
-    } else {
-      IVariableDebtToken(reserve.variableDebtTokenAddress).burn(
-        msg.sender,
-        variableDebt,
-        reserve.variableBorrowIndex
-      );
-      IStableDebtToken(reserve.stableDebtTokenAddress).mint(
-        msg.sender,
-        msg.sender,
-        variableDebt,
-        reserve.currentStableBorrowRate
-      );
-    }
+    IStableDebtToken(reserve.stableDebtTokenAddress).burn(msg.sender, stableDebt);
+    IVariableDebtToken(reserve.variableDebtTokenAddress).mint(
+      msg.sender,
+      msg.sender,
+      stableDebt,
+      reserve.variableBorrowIndex
+    );
 
     reserve.updateInterestRates(asset, reserve.aTokenAddress, 0, 0);
 
