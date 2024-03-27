@@ -253,14 +253,12 @@ library ValidationLogic {
    * @param reserve The reserve state on which the user is swapping the rate
    * @param userConfig The user reserves configuration
    * @param stableDebt The stable debt of the user
-   * @param variableDebt The variable debt of the user
    * @param currentRateMode The rate mode of the borrow
    */
   function validateSwapRateMode(
     DataTypes.ReserveData storage reserve,
     DataTypes.UserConfigurationMap storage userConfig,
     uint256 stableDebt,
-    uint256 variableDebt,
     DataTypes.InterestRateMode currentRateMode
   ) external view {
     (bool isActive, , , ) = reserve.configuration.getFlags();
