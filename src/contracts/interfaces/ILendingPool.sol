@@ -4,7 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import {ILendingPoolAddressesProvider} from './ILendingPoolAddressesProvider.sol';
 import {DataTypes} from '../protocol/libraries/types/DataTypes.sol';
-import {IRescue} from '../../../../interfaces/IRescue.sol';
+import {IRescue} from './../../interfaces/IRescue.sol';
 
 interface ILendingPool is IRescue {
   /**
@@ -408,4 +408,6 @@ interface ILendingPool is IRescue {
   function setPause(bool val) external;
 
   function paused() external view returns (bool);
+
+  function swapToVariable(address asset, address user) external;
 }

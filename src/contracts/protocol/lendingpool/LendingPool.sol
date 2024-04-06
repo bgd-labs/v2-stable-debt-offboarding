@@ -53,7 +53,7 @@ contract LendingPool is VersionedInitializable, ILendingPool, LendingPoolStorage
   uint256 public constant MAX_STABLE_RATE_BORROW_SIZE_PERCENT = 2500;
   uint256 public constant FLASHLOAN_PREMIUM_TOTAL = 9;
   uint256 public constant MAX_NUMBER_RESERVES = 128;
-  uint256 public constant LENDINGPOOL_REVISION = 0x4;
+  uint256 public constant LENDINGPOOL_REVISION = 0x5;
 
   modifier whenNotPaused() {
     _whenNotPaused();
@@ -301,6 +301,39 @@ contract LendingPool is VersionedInitializable, ILendingPool, LendingPoolStorage
   }
 
   /**
+   * @notice Allows a borrower to swap his debt between stable and variable mode,
+   * @dev introduce in a flavor stable rate deprecation
+   * @param asset The address of the underlying asset borrowed
+   * @param user The address of the user to be swapped
+   */
+  function swapToVariable(address asset, address user) external override whenNotPaused {
+    DataTypes.ReserveData storage reserve = _reserves[asset];
+
+    (uint256 stableDebt,) = Helpers.getUserCurrentDebt(user, reserve);
+
+    ValidationLogic.validateSwapRateMode(
+      reserve,
+      _usersConfig[user],
+      stableDebt,
+      DataTypes.InterestRateMode.STABLE
+    );
+
+    reserve.updateState();
+
+    IStableDebtToken(reserve.stableDebtTokenAddress).burn(user, stableDebt);
+    IVariableDebtToken(reserve.variableDebtTokenAddress).mint(
+      user,
+      user,
+      stableDebt,
+      reserve.variableBorrowIndex
+    );
+
+    reserve.updateInterestRates(asset, reserve.aTokenAddress, 0, 0);
+
+    emit Swap(asset, user, 1);
+  }
+
+  /**
    * @dev Allows a borrower to swap his debt between stable and variable mode, or viceversa
    * @param asset The address of the underlying asset borrowed
    * @param rateMode The rate mode that the user wants to swap to
@@ -308,7 +341,7 @@ contract LendingPool is VersionedInitializable, ILendingPool, LendingPoolStorage
   function swapBorrowRateMode(address asset, uint256 rateMode) external override whenNotPaused {
     DataTypes.ReserveData storage reserve = _reserves[asset];
 
-    (uint256 stableDebt, uint256 variableDebt) = Helpers.getUserCurrentDebt(msg.sender, reserve);
+    (uint256 stableDebt, ) = Helpers.getUserCurrentDebt(msg.sender, reserve);
 
     DataTypes.InterestRateMode interestRateMode = DataTypes.InterestRateMode(rateMode);
 
@@ -316,33 +349,18 @@ contract LendingPool is VersionedInitializable, ILendingPool, LendingPoolStorage
       reserve,
       _usersConfig[msg.sender],
       stableDebt,
-      variableDebt,
       interestRateMode
     );
 
     reserve.updateState();
 
-    if (interestRateMode == DataTypes.InterestRateMode.STABLE) {
-      IStableDebtToken(reserve.stableDebtTokenAddress).burn(msg.sender, stableDebt);
-      IVariableDebtToken(reserve.variableDebtTokenAddress).mint(
-        msg.sender,
-        msg.sender,
-        stableDebt,
-        reserve.variableBorrowIndex
-      );
-    } else {
-      IVariableDebtToken(reserve.variableDebtTokenAddress).burn(
-        msg.sender,
-        variableDebt,
-        reserve.variableBorrowIndex
-      );
-      IStableDebtToken(reserve.stableDebtTokenAddress).mint(
-        msg.sender,
-        msg.sender,
-        variableDebt,
-        reserve.currentStableBorrowRate
-      );
-    }
+    IStableDebtToken(reserve.stableDebtTokenAddress).burn(msg.sender, stableDebt);
+    IVariableDebtToken(reserve.variableDebtTokenAddress).mint(
+      msg.sender,
+      msg.sender,
+      stableDebt,
+      reserve.variableBorrowIndex
+    );
 
     reserve.updateInterestRates(asset, reserve.aTokenAddress, 0, 0);
 
