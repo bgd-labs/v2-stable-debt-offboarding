@@ -9,7 +9,8 @@ remappings = [
 fs_permissions = [{ access = "write", path = "./reports" }]
 libraries=[
     "src/contracts/protocol/libraries/logic/ReserveLogic.sol:ReserveLogic:0xe58575ba47a348e3c2f9b7ec3eccfbb189ccc6ec",
-    "src/contracts/protocol/libraries/logic/ValidationLogic.sol:ValidationLogic:0xf5543cdd5f551635e13ebe07e47d01d0fc9cbbd5"
+    "src/contracts/protocol/libraries/logic/GenericLogic.sol:GenericLogic:0xeae736e5d6560169f9285c62492f8a89fb4ab790",
+    "src/contracts/protocol/libraries/logic/ValidationLogic.sol:ValidationLogic:0xb65308a8F4cE57a72F13312CeCBaAf47601A574A"
 ]
 
 [rpc_endpoints]
